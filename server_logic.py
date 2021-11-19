@@ -1,79 +1,84 @@
 import random
-from typing import List, Dict
+import numpy as n
+def get_food(my_head_x, food):
+    food_data = [list(i.values()) for i in list(food)]
+    if len(food_data) > 0:
+      near = (n.abs([i[0]-my_head_x for i in food_data])).argmin()
+      return food_data[near]
 
-"""
-This file can be a nice home for your move logic, and to write helper functions.
+def hunt_food(my_head_x, my_head_y, moves, food):
+  if get_food(my_head_x, food) != None:
+    if (my_head_x < get_food(my_head_x, food)[0]) and ('left' in moves):
+      moves.remove('left')
+    if (my_head_x > get_food(my_head_x, food)[0]) and ('right' in moves):
+      moves.remove('right')
+    if (my_head_y < get_food(my_head_x, food)[1]) and ('down' in moves):
+      moves.remove('down')
+    if (my_head_y > get_food(my_head_x, food)[1]) and ('up' in moves):
+      moves.remove('up')
 
-We have started this for you, with a function to help remove the 'neck' direction
-from the list of possible moves!
-"""
-
-
-def avoid_my_neck(my_head: Dict[str, int], my_body: List[dict], possible_moves: List[str]) -> List[str]:
-    """
-    my_head: Dictionary of x/y coordinates of the Battlesnake head.
-            e.g. {"x": 0, "y": 0}
-    my_body: List of dictionaries of x/y coordinates for every segment of a Battlesnake.
-            e.g. [ {"x": 0, "y": 0}, {"x": 1, "y": 0}, {"x": 2, "y": 0} ]
-    possible_moves: List of strings. Moves to pick from.
-            e.g. ["up", "down", "left", "right"]
-
-    return: The list of remaining possible_moves, with the 'neck' direction removed
-    """
+def avoid_my_neck(my_head_x, my_head_y, my_body, moves):
     my_neck = my_body[1]  # The segment of body right after the head is the 'neck'
+    if my_neck["x"] < my_head_x and ('left' in moves):  # my neck is left of my head
+        moves.remove("left")
+    elif my_neck["x"] > my_head_x and ('right' in moves):  # my neck is right of my head
+        moves.remove("right")
+    elif my_neck["y"] < my_head_y and ('down' in moves):  # my neck is below my head
+        moves.remove("down")
+    elif my_neck["y"] > my_head_y and ('up' in moves):  # my neck is above my head
+        moves.remove("up")
+ 
+def avoid_walls(lengthX, my_head_x, my_head_y, lengthY, moves):
+  if (my_head_x == 0) and ('left' in moves): 
+    moves.remove('left')
+  if (my_head_x == lengthX-1) and ('right' in moves): 
+    moves.remove('right') 
+  if (my_head_y == 0) and ('down' in moves):
+    moves.remove('down') 
+  if (my_head_y == lengthY-1) and ('up' in moves): 
+    moves.remove('up')
 
-    if my_neck["x"] < my_head["x"]:  # my neck is left of my head
-        possible_moves.remove("left")
-    elif my_neck["x"] > my_head["x"]:  # my neck is right of my head
-        possible_moves.remove("right")
-    elif my_neck["y"] < my_head["y"]:  # my neck is below my head
-        possible_moves.remove("down")
-    elif my_neck["y"] > my_head["y"]:  # my neck is above my head
-        possible_moves.remove("up")
+def snake_position(moves, my_head_x, my_head_y, lengthX, lengthY, snakes, snakesX):
+  for i in snakes:
+    for j in i['body']:
+      snakesX.append((j.get('x'), j.get('y')))
+  if (my_head_x-1, my_head_y) in snakesX and ('left' in moves):
+    moves.remove('left')
+  if(my_head_x, my_head_y-1) in snakesX and ('down' in moves):
+    moves.remove('down')
+  if (my_head_x+1, my_head_y) in snakesX and ('right' in moves):
+    moves.remove('right')
+  if(my_head_x, my_head_y+1) in snakesX and ('up' in moves):
+    moves.remove('up')
 
-    return possible_moves
 
+def call_function(lengthX, lengthY,  my_head_x, my_head_y, my_body, snakes, snakesX, moves, food):
+  avoid_walls(lengthX, my_head_x, my_head_y, lengthY, moves)
+  snake_position(moves, my_head_x, my_head_y, lengthX, lengthY, snakes, snakesX)
+  avoid_my_neck(my_head_x, my_head_y, my_body, moves)
+  #hunt_food(my_head_x, my_head_y, moves, food)
+  return moves    
 
-def choose_move(data: dict) -> str:
-    """
-    data: Dictionary of all Game Board data as received from the Battlesnake Engine.
-    For a full example of 'data', see https://docs.battlesnake.com/references/api/sample-move-request
-
-    return: A String, the single move to make. One of "up", "down", "left" or "right".
-
-    Use the information in 'data' to decide your next move. The 'data' variable can be interacted
-    with as a Python Dictionary, and contains all of the information about the Battlesnake board
-    for each move of the game.
-
-    """
-    my_head = data["you"]["head"]  # A dictionary of x/y coordinates like {"x": 0, "y": 0}
-    my_body = data["you"]["body"]  # A list of x/y coordinate dictionaries like [ {"x": 0, "y": 0}, {"x": 1, "y": 0}, {"x": 2, "y": 0} ]
-
+def choose_move(data):
+    snakesX = []
+    food = data['board']['food']
+    my_head_x = data["you"]["head"]['x']
+    my_head_y = data['you']['head']['y']
+    my_body = data["you"]["body"] 
+    lengthX = data['board']['width']
+    lengthY = data['board']['height']
+    snakes = data['board']['snakes']
     # TODO: uncomment the lines below so you can see what this data looks like in your output!
-    # print(f"~~~ Turn: {data['turn']}  Game Mode: {data['game']['ruleset']['name']} ~~~")
-    # print(f"All board data this turn: {data}")
-    # print(f"My Battlesnakes head this turn is: {my_head}")
-    # print(f"My Battlesnakes body this turn is: {my_body}")
+    print(f"~~~ Turn: {data['turn']}  Game Mode: {data['game']['ruleset']['name']} ~~~")
+    print(f"All board data this turn: {data}")
+    print(f"My Battlesnakes head this turn is: {my_head_x}")
+    print(f"My Battlesnakes body this turn is: {my_body}")
 
-    possible_moves = ["up", "down", "left", "right"]
+    moves = ["up", "down", "left", "right"]
 
-    # Don't allow your Battlesnake to move back in on it's own neck
-    possible_moves = avoid_my_neck(my_head, my_body, possible_moves)
+    moves = call_function(lengthX,lengthY, my_head_x, my_head_y, my_body, snakes, snakesX, moves, food)
+    move = random.choice(moves)
 
-    # TODO: Using information from 'data', find the edges of the board and don't let your Battlesnake move beyond them
-    # board_height = ?
-    # board_width = ?
-
-    # TODO Using information from 'data', don't let your Battlesnake pick a move that would hit its own body
-
-    # TODO: Using information from 'data', don't let your Battlesnake pick a move that would collide with another Battlesnake
-
-    # TODO: Using information from 'data', make your Battlesnake move towards a piece of food on the board
-
-    # Choose a random direction from the remaining possible_moves to move in, and then return that move
-    move = random.choice(possible_moves)
-    # TODO: Explore new strategies for picking a move that are better than random
-
-    print(f"{data['game']['id']} MOVE {data['turn']}: {move} picked from all valid options in {possible_moves}")
+    print(f"{data['game']['id']} MOVE {data['turn']}: {move} picked from all valid options in {moves} \n ({my_head_x}, {my_head_y}), {my_body[1]['x']}, {my_body[1]['y']}, {snakesX}, {get_food(my_head_x, food)}, {snakes}")
 
     return move
